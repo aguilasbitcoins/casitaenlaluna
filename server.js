@@ -320,7 +320,7 @@ app.listen(PORT, () => {
 // ====================================================================================
 setInterval(async () => {
   try {
-    const response = await fetch(`http://localhost:${PORT}/`);
+    const response = await fetch(`https://casitaenlaluna.onrender.com`);
     const data = await response.json();
     console.log("🔄 Auto-ping realizado:", data.service);
   } catch (error) {
